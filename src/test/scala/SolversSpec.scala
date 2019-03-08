@@ -1,6 +1,6 @@
 import java.awt.Point
 
-import model.{Grid, Region, Square}
+import model.{Region, Square}
 import org.scalatest.WordSpec
 
 class SolversSpec extends WordSpec {
@@ -16,8 +16,8 @@ class SolversSpec extends WordSpec {
   assert(grid.getRegions.contains(region))
   assert(grid.hasTrivialSolution)
   assert(!grid.isComplete)
-  assert(Solvers.findCandidates(grid).getSquares(region).forall(!_.candidates.contains(9)))
-  assert(Solvers.reduceCandidates(grid2).getValues(region).contains(9))
+  assert(Solvers.reduceCandidates(grid).getSquares(region).forall(!_.candidates.contains(9)))
+  assert(Solvers.resolveSingletons(grid2).getValues(region).contains(9))
   assert(Solvers.reduceSingletons(grid3).getValues(region).contains(9))
 
 }

@@ -4,9 +4,9 @@ import java.awt.Dimension
 import java.awt.event.{ComponentEvent, ComponentListener, WindowAdapter, WindowListener}
 
 import javax.swing.{JFrame, WindowConstants}
-import model.Grid
+import model.Square
 
-class MainUI(grid: Grid) extends JFrame {
+class MainUI(grid: Set[Square]) extends JFrame {
 
   private val self = this
   private val gridDisplay = new GridDisplay(grid)

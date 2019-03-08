@@ -2,25 +2,26 @@ package ui
 
 import java.awt._
 
-import model.Grid
+import model.Square
 
-class GridDisplay(_grid: Grid) extends Container {
+class GridDisplay(_grid: Set[Square]) extends Container {
 
-  var $grid: Grid = _grid
+  var $grid: Set[Square] = _grid
 
   init()
 
-  def grid: Grid = $grid
-  def grid_$eq(g: Grid): Unit = {
+  def grid: Set[Square] = $grid
+  def grid_$eq(g: Set[Square]): Unit = {
     $grid = g
     this.paint(this.getGraphics)
   }
 
   private def init(): Unit = {
-    val minX = grid.squares.minBy(_.coordinates.x).coordinates.x
-    val maxX = grid.squares.maxBy(_.coordinates.x).coordinates.x
-    val minY = grid.squares.minBy(_.coordinates.y).coordinates.y
-    val maxY = grid.squares.maxBy(_.coordinates.y).coordinates.y
+    /*
+    val minX = grid.minBy(_.coordinates.x).coordinates.x
+    val maxX = grid.maxBy(_.coordinates.x).coordinates.x
+    val minY = grid.minBy(_.coordinates.y).coordinates.y
+    val maxY = grid.maxBy(_.coordinates.y).coordinates.y
     val squareWidth = this.getPreferredSize.width / (maxX - minX + 1)
     val squareHeight = this.getPreferredSize.height / (maxY - minY + 1)
 
@@ -29,6 +30,7 @@ class GridDisplay(_grid: Grid) extends Container {
     }).map(s => new SquareDisplay(s){ setPreferredSize(new Dimension(squareWidth, squareHeight))})
     this.setLayout(new GridLayout(maxX - minX + 1, maxY - minY + 1))
     squares.foreach(s => this.add(s))
+    */
   }
 
 }

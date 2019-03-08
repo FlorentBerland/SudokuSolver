@@ -1,86 +1,91 @@
-import model.{Grid, Square}
+import model.{Region, Square}
 
 import scala.annotation.tailrec
 
 object Solvers {
 
-  /*
-    Eliminates all the candidates that cannot be present in each square
-   */
-  def findCandidates(grid: Grid): Grid = {
-    Grid(grid.squares.map(s => s.valueChanged(
-      (s.value match {
-        case None => Some(Right(Square.getValues))
-        case some => some
-      }).map(value => {
-        value match {
-          case Right(candidates) =>
-            Right(s.regions.foldLeft(candidates)((candidates, region) => {
-              candidates diff grid.getValues(region)
-            }))
-          case left => left
-        }
-      }))
-    ))
+  /**
+    * Tests whether the resolution worth being continued
+    *
+    * @param grid The grid to check
+    * @return True if the grid is not complete and is not jammed, false otherwise
+    */
+  def canContinue(grid: Set[Square]): Boolean = {
+    def notComplete: Boolean = grid.exists(_.value.isRight)
+    def notJammed: Boolean = grid.forall(s => s.value.isLeft || s.value.right.get.nonEmpty)
+    notComplete && notJammed
+  }
+
+  def getRegions(grid: Set[Square]): Set[Region] = {
+    grid.foldLeft(Set.empty[Region])((set, square) => set ++ square.regions)
+  }
+
+  def squaresInRegion(grid: Set[Square], region: Region): Set[Square] = {
+    grid.foldLeft(Set.empty[Square])((set, square) => {
+      if(square.regions.contains(region)) set + square
+      else set
+    })
+  }
+
+  def squaresByRegion(grid: Set[Square]): Map[Region, Set[Square]] = {
+    getRegions(grid).map(r => (r, squaresInRegion(grid, r))).toMap
   }
 
   /*
     If a square has a single candidate, the candidate is the solution of the square
    */
-  def reduceCandidates(grid: Grid): Grid = {
-    Grid(grid.squares.map(s => s.valueChanged(
-      s.value.map(either => either match {
-          case Right(candidates) =>
-            if(candidates.size == 1) Left(candidates.head)
-            else Right(candidates)
-          case left => left
-        }
-      ))
-    ))
+  def resolveSingletons(grid: Set[Square]): Set[Square] = {
+    grid.map(s => if(s.candidates.size == 1) s.solutionFound(s.candidates.head) else s)
+  }
+
+  /*
+   Eliminates all the candidates that cannot be present in each square
+  */
+  def reduceCandidates(grid: Set[Square]): Set[Square] = {
+    grid.map(square => {
+      square.value match {
+        case Left(_) => square
+        case Right(candidates) =>
+          val sbr = squaresByRegion(grid)
+          square.valueUpdated(Right(square.regions.foldLeft(candidates)((candidates, region) => {
+            sbr(region).foldLeft(candidates)((candidates, square) => {
+            if(square.isSolved) candidates - square.value.left.get
+            else candidates
+          })
+        })))
+      }
+    })
   }
 
   /*
     When a region contains a single square for a candidate, the square is the solution
    */
-  def reduceSingletons(grid: Grid): Grid = {
-    val squaresByRegion = grid.getRegions.map(region => grid.getSquares(region))
-    val reducedSquares = squaresByRegion.flatMap(squareSet => {
-      Square.getValues.flatMap(value => {
-        // Count the number of occurrences of the candidate value in the region
-        val count = squareSet.count(_.candidates.contains(value))
-        // If there is a single candidate, assign it to the square that contains it
-        if(count == 1) squareSet.map(s => if(s.candidates.contains(value)) s.valueFound(value) else s)
-        else squareSet
-      })
+  def reduceSingletons(grid: Set[Square]): Set[Square] = {
+    grid.map(square => square.value match {
+      case Left(_) => square
+      case Right(candidates) =>
+        val sbr = squaresByRegion(grid)
+        val singletonSet = candidates.foldLeft(Set.empty[Any])((singletonSet, candidate) => {
+          square.regions.foldLeft(singletonSet)((singletonSet, region) => {
+            // If the candidate is alone in the region, it is added to the set
+            if(sbr(region).count(s => s.value.right.getOrElse(Set.empty).contains(candidate)) == 1)
+              singletonSet + candidate
+            else singletonSet
+          })
+        })
+        if(singletonSet.size == 1) square.solutionFound(singletonSet.head)
+        else square
     })
-
-    val mergedSequences = (new ((Set[Square], Set[Square]) => Set[Square]) {
-      @tailrec
-      def apply(newSeq: Set[Square], oldSeq: Set[Square]): Set[Square] = {
-        if (oldSeq.isEmpty) newSeq
-        else {
-          val head = oldSeq.head
-          newSeq.find(_.coordinates.equals(head.coordinates)) match {
-            case Some(square) =>
-              if (square.isSolved) apply(newSeq, oldSeq.tail)
-              else apply(newSeq - square + head, oldSeq.tail)
-            case None => apply(newSeq + head, oldSeq.tail)
-          }
-        }
-      }
-    })(Set.empty, reducedSquares)
-
-    Grid(mergedSequences)
   }
 
   /*
     When two (resp. 3, 4, 5, ...) squares of the same region has the same two (resp. 3, 4, 5, ...) candidates
     but no other candidate, all these candidates are removed from the other squares of the region
    */
-  def reduceTuples(grid: Grid): Grid = {
+  def reduceTuples(grid: Set[Square]): Set[Square] = {
     def sameElements(square1: Square, square2: Square): Boolean = {
       @tailrec
-      def sameElementsTR(set1: Set[Int], set2: Set[Int]): Boolean = {
+      def sameElementsTR(set1: Set[Any], set2: Set[Any]): Boolean = {
         if (set2.isEmpty) set1.isEmpty
         else {
           set1.find(_ == set2.head) match {
@@ -93,40 +98,37 @@ object Solvers {
     }
 
     def groupBy[T](col: Set[T], p: (T, T) => Boolean): Set[Set[T]] = {
-      var map = Map.empty[T, Set[T]]
-      col.foreach(elem => {
+      col.foldLeft(Map.empty[T, Set[T]])((map, elem) => {
         map.find(kv => p(kv._1, elem)) match {
-          case Some(kv) => map = map + (kv._1 -> (map(kv._1) + elem))
-          case None => map = map + (elem -> Set(elem))
+          case Some(kv) => map.updated(kv._1, map(kv._1) + elem)
+          case None => map + (elem -> Set(elem))
         }
-      })
-      map.values.toSet
+      }).values.toSet
     }
 
-    val squaresByRegion = grid.getRegions.map(region => grid.getSquares(region))
-    val a = squaresByRegion.map(squaresInRegion => {
-      // If many squares have the same candidates, they are grouped in the same set
-      val squaresGroupedByCandidates = groupBy[Square](squaresInRegion, sameElements)
-      // Keep only the sets that have as many squares as candidates and merge it into a single set
-      val filteredGroupedSquares = squaresGroupedByCandidates.filter(kv => kv.size == kv.head.candidates.size).flatten
-      // For each set, remove all the others candidates from the others squares
-      squaresInRegion.map(square => if(!square.isSolved && !filteredGroupedSquares.contains(square)){
-        0
-      })
-      0
+    grid.map(square => {
+      square.value match {
+        case Left(_) => square
+        case Right(candidates) =>
+          val sbr = squaresByRegion(grid)
+          square.valueUpdated(Right(
+            square.regions.foldLeft(candidates)((candidates, region) => {
+              // Each subset has n squares with the same n candidates (if the grid has a solution)
+              groupBy(sbr(region), sameElements).filter(_.size > 1).foldLeft(candidates)((candidates, subset) => {
+                // If the square is not in the subset, the candidates in the subset are removed from the square candidates
+                if(!subset.contains(square)) candidates - subset.head.value.right.get
+                else candidates
+              })
+            })
+          ))
+      }
     })
-
-    grid
   }
 
   @tailrec
   // FIXME: The solver should stop if there is no progression between two iterations
-  def solve(grid: Grid, algorithms: Compositor[Grid]): Grid = {
-    if(grid.isComplete) grid
-    else {
-      val fullGrid = findCandidates(grid)
-      if(!fullGrid.hasTrivialSolution) grid
-      else solve(algorithms(fullGrid), algorithms)
-    }
+  def solve(grid: Set[Square], algorithms: Compositor[Set[Square]]): Set[Square] = {
+    if(!canContinue(grid)) grid
+    else solve(algorithms(grid), algorithms)
   }
 }
