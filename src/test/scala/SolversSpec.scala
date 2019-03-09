@@ -1,23 +1,67 @@
-import java.awt.Point
-
 import model.{Region, Square}
 import org.scalatest.WordSpec
 
 class SolversSpec extends WordSpec {
 
-  private val region = new Region()
-  private val squaresPartial = (1 to 8).map(i => Square(new Point(1, i), None, Set(region))).toSet
-  private val squaresPartial2 = (1 to 8).map(i => Square(new Point(1, i), Some(Right((1 to 8).toSet)), Set(region))).toSet
-  private val grid = Grid(squaresPartial + Square(new Point(1, 9), Some(Left(9)), Set(region)))
-  private val grid2 = Grid(squaresPartial + Square(new Point(1, 9), Some(Right(Set(9))), Set(region)))
-  private val grid3 = Grid(squaresPartial2 + Square(new Point(1, 9), Some(Right((1 to 9).toSet)), Set(region)))
+  "A square" when {
+    "has a single candidate" should {
+      "be solved" in {
+        val square = Square(Right[Any, Set[Any]](Set(4)))
+        assert(Solvers.resolveHiddenSingletons(Set(square)).head.isSolved)
+      }
+      "have the candidate as solution" in {
+        val square = Square(Right[Any, Set[Any]](Set(4)))
+        assert(Solvers.resolveHiddenSingletons(Set(square)).head.value.left.get == 4)
+      }
+    }
+    "has multiple candidates" should {
+      "not be solved" in {
+        val square = Square(Right[Any, Set[Any]](Set(4, 5)))
+        assert(!Solvers.resolveHiddenSingletons(Set(square)).head.isSolved)
+      }
+    }
 
-  assert(grid.getValues(region).contains(9))
-  assert(grid.getRegions.contains(region))
-  assert(grid.hasTrivialSolution)
-  assert(!grid.isComplete)
-  assert(Solvers.reduceCandidates(grid).getSquares(region).forall(!_.candidates.contains(9)))
-  assert(Solvers.resolveSingletons(grid2).getValues(region).contains(9))
-  assert(Solvers.reduceSingletons(grid3).getValues(region).contains(9))
+    "has a candidate which is unique in the region" should {
+      "be solved" in {
+        val region = new Region
+        val squareWithUniqueCandidate = Square(Right[Any, Set[Any]](Set(4, 5, 6)), Set(region))
+        val squareNotSolvable = Square(Right[Any, Set[Any]](Set(4, 6)), Set(region))
+        val grid = Set(squareWithUniqueCandidate, squareNotSolvable)
+        assert(Solvers.resolveSingletons(grid).head.isSolved)
+      }
+      "have its candidate as the solution" in {
+        val region = new Region
+        val squareWithUniqueCandidate = Square(Right[Any, Set[Any]](Set(4, 5, 6)), Set(region))
+        val squareNotSolvable = Square(Right[Any, Set[Any]](Set(4, 6)), Set(region))
+        val grid = Set(squareWithUniqueCandidate, squareNotSolvable)
+        assert(Solvers.resolveSingletons(grid).head.value.left.get == 5)
+      }
+    }
 
+    "in the same region as a solved square" should {
+      "have its candidate equal the solved square eliminated" in {
+        val region = new Region
+        val unsolvedSquare = Square(Right[Any, Set[Any]](Set(4, 5)), Set(region))
+        val solvedSquare = Square(Left(4), Set(region))
+        val grid = Set(unsolvedSquare, solvedSquare)
+        val reducedGrid = Solvers.reduceCandidates(grid)
+        assert(!reducedGrid.head.value.right.get.contains(4))
+        assert(reducedGrid.head.value.right.get.contains(5))
+      }
+
+
+      "is in a region that contains a tuple of squares with exactly the same candidates" should {
+        "remove all the candidates equal these in the tuple" in {
+          val region = new Region
+          val squareTuple1 = Square(Right[Any, Set[Any]](Set(1, 2, 3)), Set(region))
+          val squareTuple2 = Square(Right[Any, Set[Any]](Set(3, 1, 2)), Set(region))
+          val squareTuple3 = Square(Right[Any, Set[Any]](Set(1, 3, 2)), Set(region))
+          val squareOther = Square(Right[Any, Set[Any]](Set(1, 4)), Set(region))
+          val grid = Set(squareOther, squareTuple1, squareTuple2, squareTuple3)
+          val reducedGrid = Solvers.reduceTuples(grid)
+          assert(!reducedGrid.head.value.right.get.contains(1))
+        }
+      }
+    }
+  }
 }

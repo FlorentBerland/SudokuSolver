@@ -5,6 +5,7 @@ import ui.MainUI
 
 object Main extends App {
 
+  /*
   val columns = Array.fill(9)(new Region)
   val rows = Array.fill(9)(new Region)
   val blocks = Array.fill(3, 3)(new Region)
@@ -63,5 +64,5 @@ object Main extends App {
   val compositor = Compositor[Set[Any]](Solvers.reduceSingletons, Solvers.resolveSingletons)
   val emptyCompositor = Compositor[Set[Any]]()
   val ui = new MainUI(Solvers.solve(grid, compositor))
-
+*/
 }
