@@ -15,14 +15,14 @@ object Solvers {
     When a region contains a single square for a candidate, the candidate is the solution of the square
    */
   val resolveSingletons: List[Square] => List[Square] = (grid: List[Square]) => {
-    val sbr = GridHelpers.squaresByRegion(grid)
+    lazy val sbr = GridHelpers.squaresByRegion(grid)
     grid.map(square => square.value match {
       case Left(_) => square
       case Right(candidates) =>
         val singletonSet = candidates.foldLeft(Set.empty[Any])((singletonSet, candidate) => {
           square.regions.foldLeft(singletonSet)((singletonSet, region) => {
             // If the candidate is alone in the region, it is added to the set
-            if(sbr(region).count(s => s.value.right.getOrElse(Set.empty).contains(candidate)) == 1)
+            if(sbr(region).count(s => s.values.contains(candidate)) == 1)
               singletonSet + candidate
             else singletonSet
           })
@@ -36,7 +36,7 @@ object Solvers {
    Eliminates all the candidates that cannot be present because solved in the region
   */
   val reduceCandidates: List[Square] => List[Square] = (grid: List[Square]) => {
-    val sbr = GridHelpers.squaresByRegion(grid)
+    lazy val sbr = GridHelpers.squaresByRegion(grid)
     grid.map(square => {
       square.value match {
         case Left(_) => square
@@ -53,7 +53,7 @@ object Solvers {
 
   /*
     When two (resp. 3, 4, 5, ...) squares of the same region has the same two (resp. 3, 4, 5, ...) candidates
-    but no other candidate, all these candidates are removed from the other squares of the region
+    but no other candidate, all these candidates are removed from the others squares of the region
    */
   val reduceTuples: List[Square] => List[Square] = (grid: List[Square]) => {
     def sameElements(square1: Square, square2: Square): Boolean = {
@@ -79,7 +79,7 @@ object Solvers {
       }).values.toList
     }
 
-    val sbr = GridHelpers.squaresByRegion(grid)
+    lazy val sbr = GridHelpers.squaresByRegion(grid)
     grid.map(square => {
       square.value match {
         case Left(_) => square
@@ -87,7 +87,7 @@ object Solvers {
           square.valueUpdated(Right(
             square.regions.foldLeft(candidates)((candidates, region) => {
               // Each subset has n squares with the same n candidates (if the grid has a solution)
-              groupBy(sbr(region), sameElements).filter(g => g.size > 1).foldLeft(candidates)((candidates, subset) => {
+              groupBy(sbr(region), sameElements).filter(g => g.size > 1 && g.size == g.head.candidates.size).foldLeft(candidates)((candidates, subset) => {
                 // If the square is not in the subset, the candidates in the subset are removed from the square candidates
                 if(!subset.contains(square)) candidates -- subset.head.value.right.get
                 else candidates

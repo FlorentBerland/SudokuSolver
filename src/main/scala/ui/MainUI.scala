@@ -6,10 +6,10 @@ import java.awt.event.{ComponentEvent, ComponentListener, WindowAdapter, WindowL
 import javax.swing.{JFrame, WindowConstants}
 import model.Square
 
-class MainUI(grid: Set[Square]) extends JFrame {
+class MainUI(grid: List[Square], allValues: Set[Any]) extends JFrame {
 
   private val self = this
-  private val gridDisplay = new GridDisplay(grid)
+  private val gridDisplay = new GridDisplay(grid, allValues)
 
   init()
 

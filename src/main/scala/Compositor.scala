@@ -11,4 +11,6 @@ case class Compositor[T](functions: (T => T)*){
     applyImpl(input, functions:_*)
   }
 
+  def ++(that: Compositor[T]): Compositor[T] = Compositor[T](functions ++ that.functions:_*)
+
 }

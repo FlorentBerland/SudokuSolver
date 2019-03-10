@@ -32,10 +32,10 @@ object GridHelpers {
   }
 
   @tailrec
-  // FIXME: The solver should stop if there is no progression between two iterations
   def solve(grid: List[Square], algorithms: Compositor[List[Square]]): List[Square] = {
-    if(!canContinue(grid)) grid
-    else solve(algorithms(grid), algorithms)
+    lazy val stepGrid = algorithms(grid)
+    if(!canContinue(grid) || stepGrid == grid) grid
+    else solve(stepGrid, algorithms)
   }
 
 }

@@ -1,30 +1,32 @@
 package ui
 
-import java.awt.{Color, Container, FlowLayout, GridLayout}
+import java.awt._
 
 import javax.swing.border.LineBorder
 import javax.swing.{JButton, JComponent, JLabel, JPanel}
 import model.Square
 
-class SquareDisplay(_square: Square) extends JComponent {
+class SquareDisplay(square: Square, allValues: Set[Any]) extends JComponent {
 
   init()
 
   private def init(): Unit = {
     this.setBorder(new LineBorder(Color.gray, 1))
-    _square.value match {
+    square.value match {
       case Left(value) =>
         this.setLayout(new FlowLayout())
-        this.add(new JLabel(value.toString))
-        this.setBackground(Color.lightGray)
+        this.add(new JLabel(value.toString){
+          setFont(new Font("Arial", Font.BOLD, 30))
+        })
       case Right(candidates) =>
-        this.setLayout(new GridLayout(3, 3))
-        (1 to 9).foreach(value => {
+        val width = Math.sqrt(allValues.size).toInt
+        val height = allValues.size / width
+        this.setLayout(new GridLayout(width, height))
+        allValues.toArray.sortBy(_.asInstanceOf[Int]).foreach(value => {
           if(candidates.contains(value)) this.add(new JLabel(value.toString))
           else this.add(new JLabel(" "))
         })
       case _ =>
-        this.setBackground(Color.lightGray)
     }
 
   }

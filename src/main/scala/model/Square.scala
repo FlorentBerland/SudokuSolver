@@ -7,8 +7,14 @@ case class Square(value: Either[Any, Set[Any]], regions: Set[Region]){
     case Right(r) => r
   }
 
+  def values: Set[Any] = value match {
+    case Left(sol) => Set(sol)
+    case Right(candidates) => candidates
+  }
+
   def solutionFound(solution: Any): Square = Square(Left(solution), regions)
   def valueUpdated(newValue: Either[Any, Set[Any]]): Square = Square(newValue, regions)
+  def regionsUpdated(newRegions: Set[Region]): Square = Square(value, newRegions)
   def isSolved: Boolean = value.isLeft
 
 }

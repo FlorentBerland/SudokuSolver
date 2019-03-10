@@ -1,36 +1,32 @@
 package ui
 
 import java.awt._
-
 import model.Square
+import scala.collection.immutable.List
 
-class GridDisplay(_grid: Set[Square]) extends Container {
+class GridDisplay(_grid: List[Square], allValues: Set[Any]) extends Container {
 
-  var $grid: Set[Square] = _grid
+  var $grid: List[Square] = _grid
 
   init()
 
-  def grid: Set[Square] = $grid
-  def grid_$eq(g: Set[Square]): Unit = {
+  def grid: List[Square] = $grid
+  def grid_$eq(g: List[Square]): Unit = {
     $grid = g
     this.paint(this.getGraphics)
   }
 
   private def init(): Unit = {
-    /*
-    val minX = grid.minBy(_.coordinates.x).coordinates.x
-    val maxX = grid.maxBy(_.coordinates.x).coordinates.x
-    val minY = grid.minBy(_.coordinates.y).coordinates.y
-    val maxY = grid.maxBy(_.coordinates.y).coordinates.y
-    val squareWidth = this.getPreferredSize.width / (maxX - minX + 1)
-    val squareHeight = this.getPreferredSize.height / (maxY - minY + 1)
-
-    val squares = grid.squares.toArray.sortWith((s1, s2) => {
-      (s1.coordinates.y < s2.coordinates.y) || (s1.coordinates.y == s2.coordinates.y && s1.coordinates.x < s2.coordinates.x)
-    }).map(s => new SquareDisplay(s){ setPreferredSize(new Dimension(squareWidth, squareHeight))})
-    this.setLayout(new GridLayout(maxX - minX + 1, maxY - minY + 1))
-    squares.foreach(s => this.add(s))
-    */
+    val width = Math.sqrt(grid.size).toInt
+    val height = grid.size / width
+    val squareWidth = getPreferredSize.width / width
+    val squareHeight = getPreferredSize.height / height
+    setLayout(new GridLayout(width, height))
+    grid.foreach(square => add(
+      new SquareDisplay(square, allValues){
+        setPreferredSize(new Dimension(squareWidth, squareHeight))
+      }
+    ))
   }
 
 }
