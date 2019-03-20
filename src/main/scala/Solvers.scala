@@ -5,16 +5,23 @@ import scala.annotation.tailrec
 object Solvers {
 
   /*
+    Remove all the candidates to clear the grid. The output grid cannot be solved.
+   */
+  val removeCandidates: List[Square] => List[Square] = (grid: List[Square]) => {
+    grid.map(s => if(s.isSolved) s else s.valueUpdated(Right(Set.empty)))
+  }
+
+  /*
     If a square has a single candidate, the candidate is the solution of the square
    */
-  val resolveHiddenSingletons: List[Square] => List[Square] = (grid: List[Square]) => {
+  val resolveSingletons: List[Square] => List[Square] = (grid: List[Square]) => {
     grid.map(s => if(s.candidates.size == 1) s.solutionFound(s.candidates.head) else s)
   }
 
   /*
     When a region contains a single square for a candidate, the candidate is the solution of the square
    */
-  val resolveSingletons: List[Square] => List[Square] = (grid: List[Square]) => {
+  val resolveHiddenSingletons: List[Square] => List[Square] = (grid: List[Square]) => {
     lazy val sbr = GridHelpers.squaresByRegion(grid)
     grid.map(square => square.value match {
       case Left(_) => square
@@ -52,8 +59,8 @@ object Solvers {
   }
 
   /*
-    When two (resp. 3, 4, 5, ...) squares of the same region has the same two (resp. 3, 4, 5, ...) candidates
-    but no other candidate, all these candidates are removed from the others squares of the region
+    When two (resp. 3, 4, 5, ...) squares of the same region has the same two (resp. 3, 4, 5, ...) candidates,
+    all these candidates are removed from the others squares of the region
    */
   val reduceTuples: List[Square] => List[Square] = (grid: List[Square]) => {
     def sameElements(square1: Square, square2: Square): Boolean = {
@@ -97,5 +104,36 @@ object Solvers {
       }
     })
   }
+
+  /*
+    When two (resp. 3, 4, 5, ...) candidates of the same region appear only in the same two (resp. 3, 4, 5, ...) squares
+    all the other candidates are removed from these squares
+   */
+  /*
+  val reduceHiddenTuples: List[Square] => List[Square] = (grid: List[Square]) => {
+    def groupBy[T](col: List[T], p: (T, T) => Boolean): List[List[T]] = {
+      col.foldLeft(Map.empty[T, List[T]])((map, elem) => {
+        map.find(kv => p(kv._1, elem)) match {
+          case Some(kv) => map.updated(kv._1, elem +: map(kv._1))
+          case None => map + (elem -> List(elem))
+        }
+      }).values.toList
+    }
+
+    lazy val sbr = GridHelpers.squaresByRegion(grid)
+
+    grid.map(square => {
+      square.value match {
+        case Left(_) => square
+        case Right(candidates) =>
+          square.valueUpdated(Right(
+            square.regions.foldLeft(candidates)((candidates, region) => {
+              // Remove the candidates for the region
+            })
+          ))
+      }
+    })
+  }
+  */
 
 }
